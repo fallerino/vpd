@@ -51,24 +51,56 @@
             background-color: #f2f2f2;
         }
         .optimal-anzucht { background-color: #4CAF50; color: white; }
-        .akzeptabel-anzucht { background-color: #FFA500; }
-        .suboptimal-anzucht { background-color: #FF6347; }
-        .optimal-vegetation { background-color: #32CD32; color: white; }
+        .akzeptabel-anzucht { background-color: #FFD700; }
+        .suboptimal-anzucht { background-color: #FF4500; }
+        .optimal-vegetation { background-color: #4CAF50; color: white; }
         .akzeptabel-vegetation { background-color: #FFD700; }
         .suboptimal-vegetation { background-color: #FF4500; }
-        .optimal-bluete { background-color: #1E90FF; color: white; }
-        .akzeptabel-bluete { background-color: #87CEEB; }
-        .suboptimal-bluete { background-color: #FF69B4; }
+        .optimal-bluete { background-color: #4CAF50; color: white; }
+        .akzeptabel-bluete { background-color: #FFD700; }
+        .suboptimal-bluete { background-color: #FF4500; }
     </style>
 </head>
 <body>
     <h1>VPD-Tabellen für verschiedene Wachstumsphasen</h1>
+
+    <style>
+        .legende {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        .legende h3 {
+            margin-top: 0;
+        }
+        .legende-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legende-farbe {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .legende-text {
+            font-size: 14px;
+        }
+    </style>
     
     <div class="tab">
         <button class="tablinks" onclick="openTab(event, 'Anzucht')">Anzucht</button>
         <button class="tablinks" onclick="openTab(event, 'Vegetation')">Vegetation</button>
         <button class="tablinks" onclick="openTab(event, 'Bluete')">Blüte</button>
     </div>
+    <style>
+        .tab button.active {
+            background-color: darkgreen;
+            color: white;
+        }
+    </style>
 
     <div id="Anzucht" class="tabcontent">
         <h2>VPD-Tabelle für die Anzuchtphase</h2>
@@ -108,8 +140,8 @@
 
         function erstelleTabelle(tableId, phase) {
             const tabelle = document.getElementById(tableId);
-            const temperaturen = Array.from({length: 17}, (_, i) => i + 16); // 16°C bis 32°C
-            const luftfeuchtigkeiten = Array.from({length: 11}, (_, i) => 40 + i * 5); // 40% bis 90% in 5% Schritten
+            const temperaturen = Array.from({length: 19}, (_, i) => i + 14); // 14°C bis 32°C
+            const luftfeuchtigkeiten = Array.from({length: 9}, (_, i) => 40 + i * 5); // 40% bis 80% in 5% Schritten
 
             // Kopfzeile
             let headerRow = tabelle.insertRow();
@@ -156,5 +188,158 @@
         // Öffne standardmäßig den ersten Tab
         document.getElementsByClassName("tablinks")[0].click();
     </script>
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+function tabelleAlsPDFHerunterladen(tableId, phase) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Überschrift hinzufügen
+    doc.setFontSize(16);
+    doc.text(`VPD-Tabelle für die ${phase}phase`, 14, 15);
+    
+    // Tabelle zum PDF hinzufügen
+    doc.autoTable({
+        html: `#${tableId}`,
+        startY: 25,
+        styles: { fillColor: false },
+        didParseCell: function(data) {
+            if (data.cell.raw.classList.contains('optimal-anzucht') ||
+                data.cell.raw.classList.contains('optimal-vegetation') ||
+                data.cell.raw.classList.contains('optimal-bluete')) {
+                data.cell.styles.fillColor = [76, 175, 80];
+                data.cell.styles.textColor = [255, 255, 255];
+            } else if (data.cell.raw.classList.contains('akzeptabel-anzucht')) {
+                data.cell.styles.fillColor = [255, 165, 0];
+            } else if (data.cell.raw.classList.contains('akzeptabel-vegetation')) {
+                data.cell.styles.fillColor = [255, 215, 0];
+            } else if (data.cell.raw.classList.contains('akzeptabel-bluete')) {
+                data.cell.styles.fillColor = [135, 206, 235];
+            } else if (data.cell.raw.classList.contains('suboptimal-anzucht')) {
+                data.cell.styles.fillColor = [255, 99, 71];
+            } else if (data.cell.raw.classList.contains('suboptimal-vegetation')) {
+                data.cell.styles.fillColor = [255, 69, 0];
+            } else if (data.cell.raw.classList.contains('suboptimal-bluete')) {
+                data.cell.styles.fillColor = [255, 105, 180];
+            }
+        }
+    });
+    
+    // PDF herunterladen
+    doc.save(`VPD_Tabelle_${phase}.pdf`);
+}
+
+// Füge Download-Buttons zu jedem Tab hinzu
+document.querySelectorAll('.tabcontent').forEach(tab => {
+    const button = document.createElement('button');
+    button.textContent = 'Als PDF herunterladen';
+    button.onclick = () => tabelleAlsPDFHerunterladen(tab.querySelector('table').id, tab.id.toLowerCase());
+    tab.insertBefore(button, tab.querySelector('table'));
+});
+</script>
+<script>
+function erstelleLegende(phase) {
+    const legende = document.createElement('div');
+    legende.className = 'legende';
+    legende.innerHTML = `
+        <h3>Legende für ${phase}</h3>
+        <div class="legende-item">
+            <span class="legende-farbe optimal-${phase}"></span>
+            <span class="legende-text">Optimal</span>
+        </div>
+        <div class="legende-item">
+            <span class="legende-farbe akzeptabel-${phase}"></span>
+            <span class="legende-text">Akzeptabel</span>
+        </div>
+        <div class="legende-item">
+            <span class="legende-farbe suboptimal-${phase}"></span>
+            <span class="legende-text">Suboptimal</span>
+        </div>
+    `;
+    return legende;
+}
+
+document.querySelectorAll('.tabcontent').forEach(tab => {
+    const phase = tab.id.toLowerCase();
+    const legende = erstelleLegende(phase);
+    tab.appendChild(legende);
+});
+</script>
+</script>
+
+<script>
+function findeUndMarkiereZelle(temperatur, luftfeuchtigkeit, phase) {
+    const tabelle = document.getElementById(`${phase}Table`);
+    const zeilen = tabelle.rows;
+    let gefunden = false;
+
+    for (let i = 1; i < zeilen.length; i++) {
+        const tempZelle = zeilen[i].cells[0];
+        if (tempZelle.textContent === `${temperatur}°C`) {
+            for (let j = 1; j < zeilen[i].cells.length; j++) {
+                const lfZelle = zeilen[0].cells[j];
+                if (lfZelle.textContent === `${luftfeuchtigkeit}%`) {
+                    zeilen[i].cells[j].style.border = '3px solid red';
+                    gefunden = true;
+                    break;
+                }
+            }
+        }
+        if (gefunden) break;
+    }
+}
+
+function erstelleEingabeformular(phase) {
+    const formular = document.createElement('div');
+    formular.innerHTML = `
+        <h3>VPD-Wert finden</h3>
+        <input type="number" id="temperatur-${phase}" placeholder="Temperatur (°C)" min="16" max="32" style="width: 200px; margin-right: 10px;">
+        <input type="number" id="luftfeuchtigkeit-${phase}" placeholder="Luftfeuchtigkeit (%)" min="40" max="90" style="width: 200px; margin-right: 10px;">
+        <button onclick="sucheVPD('${phase}')">Suchen</button>
+    `;
+    return formular;
+}
+
+function sucheVPD(phase) {
+    const temperatur = document.getElementById(`temperatur-${phase}`).value;
+    const luftfeuchtigkeit = document.getElementById(`luftfeuchtigkeit-${phase}`).value;
+    if (temperatur && luftfeuchtigkeit) {
+        findeUndMarkiereZelle(temperatur, luftfeuchtigkeit, phase);
+    } else {
+        alert('Bitte geben Sie sowohl Temperatur als auch Luftfeuchtigkeit ein.');
+    }
+}
+
+document.querySelectorAll('.tabcontent').forEach(tab => {
+    const phase = tab.id.toLowerCase();
+    const formular = erstelleEingabeformular(phase);
+    tab.appendChild(formular);
+});
+</script>
+
+<div class="vpd-erklärung">
+    <h3>Was ist der VPD-Wert im Cannabis-Anbau?</h3>
+    <p>
+        Der VPD-Wert (Vapor Pressure Deficit) ist ein wichtiger Parameter im Cannabis-Anbau, der das Verhältnis zwischen der Temperatur und der relativen Luftfeuchtigkeit beschreibt. Er gibt an, wie viel Feuchtigkeit die Luft noch aufnehmen kann, bevor sie gesättigt ist.
+    </p>
+    <p>
+        Im Cannabis-Anbau ist der VPD-Wert von großer Bedeutung, da er direkten Einfluss auf die Transpiration der Pflanzen hat. Ein optimaler VPD-Wert ermöglicht es den Pflanzen, Wasser und Nährstoffe effizient aufzunehmen und zu transportieren, was zu einem gesunden Wachstum und einer höheren Ertragsqualität führt.
+    </p>
+    <p>
+        Die idealen VPD-Werte variieren je nach Wachstumsphase:
+    </p>
+    <ul>
+        <li>Anzuchtphase: 0,4 - 0,8 kPa</li>
+        <li>Vegetationsphase: 0,8 - 1,2 kPa</li>
+        <li>Blütephase: 1,0 - 1,5 kPa</li>
+    </ul>
+    <p>
+        Durch die Kontrolle und Anpassung des VPD-Wertes können Züchter das Mikroklima optimieren und somit die Gesundheit und Produktivität ihrer Cannabis-Pflanzen verbessern.
+    </p>
+</div>
+
 </body>
 </html>
